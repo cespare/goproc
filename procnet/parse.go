@@ -11,7 +11,7 @@ import (
 
 var procFiles = []string{"netstat", "snmp"}
 
-// ReadNetStats parses the files /proc/net/netstat, /proc/net/snmp, and /proc/net/snmp6.
+// ReadNetStats parses the files /proc/net/netstat, and /proc/net/snmp.
 func ReadNetStats() (map[string]map[string]int64, error) {
 	result := make(map[string]map[string]int64)
 	for _, filename := range procFiles {
