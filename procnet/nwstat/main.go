@@ -126,7 +126,7 @@ func printStats() {
 	// Delta section header
 	tbPrintf(termbox.ColorDefault, "%-20s", "")
 	for i, d := range buckets {
-		tbPrint(termbox.ColorWhite, centerString(fmt.Sprintf("last %s", d), 15))
+		tbPrint(termbox.ColorWhite, centerString(fmt.Sprintf("last %s", d), 17))
 		if i < len(buckets)-1 {
 			tbPrint(termbox.ColorBlue, " │ ")
 		}
@@ -169,14 +169,14 @@ func centerString(s string, size int) string {
 func tbFormatBufs(name string, bufs []*CircBuf) {
 	tbPrintf(termbox.ColorWhite, "%-20s", name)
 	for i, d := range buckets {
-		value := fmt.Sprintf("%6s", "?")
-		perSecond := fmt.Sprintf("%9s", "?")
+		value := fmt.Sprintf("%7s", "?")
+		perSecond := fmt.Sprintf("%10s", "?")
 		circBuf := bufs[i]
 		if circBuf.Full() {
 			delta := circBuf.Delta()
 			deltaPerSecond := float64(delta) / d.Seconds()
-			value = fmt.Sprintf("%6d", delta)
-			perSecond = fmt.Sprintf("%7.1f/s", deltaPerSecond)
+			value = fmt.Sprintf("%7d", delta)
+			perSecond = fmt.Sprintf("%8.1f/s", deltaPerSecond)
 		}
 		tbPrintf(termbox.ColorGreen, "%s%s", value, perSecond)
 		if i < len(buckets)-1 {
