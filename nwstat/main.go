@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cespare/goproc/procnet"
+	"github.com/cespare/goproc"
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -106,7 +106,7 @@ var (
 )
 
 func printStats() {
-	stats, err := procnet.ReadNetStats()
+	stats, err := proc.NetStats()
 	if err != nil {
 		fatal(err)
 	}

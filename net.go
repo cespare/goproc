@@ -1,4 +1,4 @@
-package procnet
+package proc
 
 import (
 	"bufio"
@@ -9,12 +9,12 @@ import (
 	"strings"
 )
 
-var procFiles = []string{"netstat", "snmp"}
+var procNetFiles = []string{"netstat", "snmp"}
 
-// ReadNetStats parses the files /proc/net/netstat, and /proc/net/snmp.
-func ReadNetStats() (map[string]map[string]int64, error) {
+// NetStats parses the files /proc/net/netstat, and /proc/net/snmp.
+func NetStats() (map[string]map[string]int64, error) {
 	result := make(map[string]map[string]int64)
-	for _, filename := range procFiles {
+	for _, filename := range procNetFiles {
 		f, err := os.Open("/proc/net/" + filename)
 		if err != nil {
 			continue
