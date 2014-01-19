@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// LoadAverages returns the 1, 5, and 15 minute load averages as reported by /proc/loadavg.
 func LoadAverages() ([3]float64, error) {
 	var avgs [3]float64
 	text, err := ioutil.ReadFile("/proc/loadavg")

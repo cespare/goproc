@@ -12,6 +12,17 @@ import (
 var procNetFiles = []string{"netstat", "snmp"}
 
 // NetStats parses the files /proc/net/netstat, and /proc/net/snmp.
+// It returns the table of values as a 2-dimensional array from category -> key -> value. For example:
+//
+//     {
+//       "Tcp": {
+//         "ActiveOpens": 11023,
+//         "PassiveOpens": 64,
+//         ...
+//       },
+//      "Udp": {...},
+//      ...
+//     }
 func NetStats() (map[string]map[string]int64, error) {
 	result := make(map[string]map[string]int64)
 	for _, filename := range procNetFiles {
