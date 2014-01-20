@@ -89,9 +89,9 @@ var (
 // NetDevStats returns the data in /proc/net/dev.
 // Example:
 // eth0 -> bytes -> 12345
-func NetDevStats() (receive, transmit map[string]map[string]int64, err error) {
-	receive = make(map[string]map[string]int64)
-	transmit = make(map[string]map[string]int64)
+func NetDevStats() (receive, transmit map[string]map[string]uint64, err error) {
+	receive = make(map[string]map[string]uint64)
+	transmit = make(map[string]map[string]uint64)
 	f, err := os.Open("/proc/net/dev")
 	if err != nil {
 		return nil, nil, err
@@ -133,14 +133,14 @@ func NetDevStats() (receive, transmit map[string]map[string]int64, err error) {
 			return nil, nil, netDevErr
 		}
 		key := string(strings.TrimSpace(parts[0]))
-		receiveValue := make(map[string]int64)
-		transmitValue := make(map[string]int64)
+		receiveValue := make(map[string]uint64)
+		transmitValue := make(map[string]uint64)
 		fields := strings.Fields(parts[1])
 		if len(fields) != len(receiveColNames)+len(transmitColNames) {
 			return nil, nil, netDevErr
 		}
 		for i, field := range fields {
-			v, err := strconv.ParseInt(string(field), 10, 64)
+			v, err := strconv.ParseUint(string(field), 10, 64)
 			if err != nil {
 				return nil, nil, err
 			}
