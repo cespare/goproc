@@ -2,16 +2,18 @@ package proc
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-var procNetFiles = []string{"netstat", "snmp"}
+var procNetProtoFiles = []string{"netstat", "snmp"}
 
-// NetStats parses the files /proc/net/netstat, and /proc/net/snmp.
+// NetProtoStats parses the files /proc/net/netstat, and /proc/net/snmp.
 // It returns the table of values as a 2-dimensional array from category -> key -> value. For example:
 //
 //     {
@@ -23,9 +25,9 @@ var procNetFiles = []string{"netstat", "snmp"}
 //      "Udp": {...},
 //      ...
 //     }
-func NetStats() (map[string]map[string]int64, error) {
+func NetProtoStats() (map[string]map[string]int64, error) {
 	result := make(map[string]map[string]int64)
-	for _, filename := range procNetFiles {
+	for _, filename := range procNetProtoFiles {
 		f, err := os.Open("/proc/net/" + filename)
 		if err != nil {
 			continue
@@ -77,4 +79,80 @@ func NetStats() (map[string]map[string]int64, error) {
 		return nil, fmt.Errorf("None of the required /proc/net/ files could be found.")
 	}
 	return result, nil
+}
+
+var (
+	netDevHeader = regexp.MustCompile(`^Inter-|\s*Receive\s*|\s*Transmit\s*$`)
+	netDevErr    = errors.New("Error parsing /proc/net/dev")
+)
+
+// NetDevStats returns the data in /proc/net/dev.
+// Example:
+// eth0 -> bytes -> 12345
+func NetDevStats() (receive, transmit map[string]map[string]int64, err error) {
+	receive = make(map[string]map[string]int64)
+	transmit = make(map[string]map[string]int64)
+	f, err := os.Open("/proc/net/dev")
+	if err != nil {
+		return nil, nil, err
+	}
+	defer f.Close()
+
+	reader := bufio.NewReader(f)
+	header, err := reader.ReadBytes('\n')
+	if err != nil {
+		return nil, nil, err
+	}
+	if !netDevHeader.Match(header) {
+		return nil, nil, netDevErr
+	}
+	cols, err := reader.ReadString('\n')
+	if err != nil {
+		return nil, nil, err
+	}
+	colSections := strings.Split(cols, "|")
+	if len(colSections) != 3 {
+		return nil, nil, netDevErr
+	}
+	receiveColNames := strings.Fields(colSections[1])
+	transmitColNames := strings.Fields(colSections[2])
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				if len(receive) == 0 {
+					return nil, nil, errors.New("No devices")
+				}
+				break
+			}
+			return nil, nil, err
+		}
+
+		parts := strings.Split(line, ":")
+		if len(parts) != 2 {
+			return nil, nil, netDevErr
+		}
+		key := string(strings.TrimSpace(parts[0]))
+		receiveValue := make(map[string]int64)
+		transmitValue := make(map[string]int64)
+		fields := strings.Fields(parts[1])
+		if len(fields) != len(receiveColNames)+len(transmitColNames) {
+			return nil, nil, netDevErr
+		}
+		for i, field := range fields {
+			v, err := strconv.ParseInt(string(field), 10, 64)
+			if err != nil {
+				return nil, nil, err
+			}
+			if i < len(receiveColNames) {
+				receiveValue[receiveColNames[i]] = v
+			} else {
+				transmitValue[transmitColNames[i-len(receiveColNames)]] = v
+			}
+		}
+		receive[key] = receiveValue
+		transmit[key] = transmitValue
+	}
+
+	return receive, transmit, nil
 }

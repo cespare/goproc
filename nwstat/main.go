@@ -106,7 +106,7 @@ var (
 )
 
 func printStats() {
-	stats, err := proc.NetStats()
+	stats, err := proc.NetProtoStats()
 	if err != nil {
 		fatal(err)
 	}
