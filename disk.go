@@ -59,3 +59,79 @@ func Mounts() ([]*FSTabEntry, error) {
 	}
 	return results, nil
 }
+
+// IOStatEntry represents a line in /proc/diskstats.
+type IOStatEntry struct {
+	// Partition info
+	Major int
+	Minor int
+	Name  string
+	// The rest of the fields are described in Linux's Documentation/iostats.txt.
+	ReadsCompleted   uint64
+	ReadsMerged      uint64
+	SectorsRead      uint64
+	ReadMillis       uint64
+	WritesCompleted  uint64
+	WritesMerged     uint64
+	SectorsWritten   uint64
+	WriteMillis      uint64
+	NumInProgressIOs uint64
+	IOMillis         uint64
+	WeightedIOMillis uint64
+}
+
+var diskStatsErr = errors.New("Cannot parse /proc/diskstats")
+
+// DiskStats reports disk information from /proc/diskstats.
+func DiskStats() ([]*IOStatEntry, error) {
+	f, err := os.Open("/proc/diskstats")
+	if err != nil {
+		return nil, err
+	}
+	scanner := bufio.NewScanner(f)
+	stats := []*IOStatEntry{}
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) != 14 {
+			return nil, diskStatsErr
+		}
+		major, err := strconv.Atoi(fields[0])
+		if err != nil {
+			return nil, err
+		}
+		minor, err := strconv.Atoi(fields[1])
+		if err != nil {
+			return nil, err
+		}
+		statFields := make([]uint64, len(fields)-3)
+		for i, field := range fields[3:] {
+			v, err := strconv.ParseUint(field, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			statFields[i] = v
+		}
+		entry := &IOStatEntry{
+			Major:            major,
+			Minor:            minor,
+			Name:             fields[2],
+			ReadsCompleted:   statFields[0],
+			ReadsMerged:      statFields[1],
+			SectorsRead:      statFields[2],
+			ReadMillis:       statFields[3],
+			WritesCompleted:  statFields[4],
+			WritesMerged:     statFields[5],
+			SectorsWritten:   statFields[6],
+			WriteMillis:      statFields[7],
+			NumInProgressIOs: statFields[8],
+			IOMillis:         statFields[9],
+			WeightedIOMillis: statFields[10],
+		}
+		stats = append(stats, entry)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return stats, nil
+}
