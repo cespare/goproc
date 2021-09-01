@@ -40,7 +40,7 @@ func NetProtoStats() (map[string]map[string]int64, error) {
 			if err != nil {
 				if err == io.EOF {
 					if len(keys) > 0 {
-						return nil, fmt.Errorf("Read a header line without a following data line.")
+						return nil, errors.New("header line without a following data line")
 					}
 					break
 				}
@@ -51,10 +51,10 @@ func NetProtoStats() (map[string]map[string]int64, error) {
 			} else {
 				values := strings.Fields(line)
 				if len(values) != len(keys) {
-					return nil, fmt.Errorf("Found a value line of a different length than the header line")
+					return nil, errors.New("value line of a different length than the header line")
 				}
 				if keys[0] != values[0] || !strings.HasSuffix(keys[0], ":") {
-					return nil, fmt.Errorf("Header or value lines don't match or don't start with a label")
+					return nil, errors.New("header or value lines don't match or don't start with a label")
 				}
 				label := keys[0][:len(keys[0])-1]
 				lineMap := make(map[string]int64)
@@ -64,7 +64,7 @@ func NetProtoStats() (map[string]map[string]int64, error) {
 					}
 					v, err := strconv.ParseInt(values[i], 10, 64)
 					if err != nil {
-						return nil, fmt.Errorf("Could not parse value.")
+						return nil, errors.New("could not parse value")
 					}
 					lineMap[key] = v
 				}
@@ -76,14 +76,15 @@ func NetProtoStats() (map[string]map[string]int64, error) {
 		f.Close() // Double close is fine
 	}
 	if len(result) == 0 {
-		return nil, fmt.Errorf("None of the required /proc/net/ files could be found.")
+		return nil, fmt.Errorf("none of the required /proc/net/ files could be found")
 	}
 	return result, nil
 }
 
 var (
 	netDevHeader = regexp.MustCompile(`^Inter-|\s*Receive\s*|\s*Transmit\s*$`)
-	netDevErr    = errors.New("Error parsing /proc/net/dev")
+
+	errNetDev = errors.New("goproc: error parsing /proc/net/dev")
 )
 
 // NetDevStats returns the data in /proc/net/dev.
@@ -104,7 +105,7 @@ func NetDevStats() (receive, transmit map[string]map[string]uint64, err error) {
 		return nil, nil, err
 	}
 	if !netDevHeader.Match(header) {
-		return nil, nil, netDevErr
+		return nil, nil, errNetDev
 	}
 	cols, err := reader.ReadString('\n')
 	if err != nil {
@@ -112,7 +113,7 @@ func NetDevStats() (receive, transmit map[string]map[string]uint64, err error) {
 	}
 	colSections := strings.Split(cols, "|")
 	if len(colSections) != 3 {
-		return nil, nil, netDevErr
+		return nil, nil, errNetDev
 	}
 	receiveColNames := strings.Fields(colSections[1])
 	transmitColNames := strings.Fields(colSections[2])
@@ -121,7 +122,7 @@ func NetDevStats() (receive, transmit map[string]map[string]uint64, err error) {
 		if err != nil {
 			if err == io.EOF {
 				if len(receive) == 0 {
-					return nil, nil, errors.New("No devices")
+					return nil, nil, errors.New("no devices")
 				}
 				break
 			}
@@ -130,14 +131,14 @@ func NetDevStats() (receive, transmit map[string]map[string]uint64, err error) {
 
 		parts := strings.Split(line, ":")
 		if len(parts) != 2 {
-			return nil, nil, netDevErr
+			return nil, nil, errNetDev
 		}
 		key := string(strings.TrimSpace(parts[0]))
 		receiveValue := make(map[string]uint64)
 		transmitValue := make(map[string]uint64)
 		fields := strings.Fields(parts[1])
 		if len(fields) != len(receiveColNames)+len(transmitColNames) {
-			return nil, nil, netDevErr
+			return nil, nil, errNetDev
 		}
 		for i, field := range fields {
 			v, err := strconv.ParseUint(string(field), 10, 64)

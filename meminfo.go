@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var memInfoParseErr = errors.New("Cannot parse /proc/meminfo")
+var errMemInfoParse = errors.New("goproc: cannot parse /proc/meminfo")
 
 // MemInfo returns the memory information fields from /proc/meminfo, such as "MemTotal" and "MemFree". Byte
 // values are returned in bytes, not kB.
@@ -22,7 +22,7 @@ func MemInfo() (map[string]uint64, error) {
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), ":")
 		if len(parts) != 2 {
-			return nil, memInfoParseErr
+			return nil, errMemInfoParse
 		}
 		key := parts[0]
 		valString := strings.TrimSpace(parts[1])

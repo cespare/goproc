@@ -20,7 +20,7 @@ type FSTabEntry struct {
 	Passno  int      // 0
 }
 
-var mountsErr = errors.New("Cannot parse /proc/mounts")
+var errMounts = errors.New("goproc: cannot parse /proc/mounts")
 
 // Read mount information from /proc/mounts for the current process.
 // BUG(caleb): This doesn't handle spaces in mount points, even though fstab specifies an encoding for them.
@@ -35,7 +35,7 @@ func Mounts() ([]*FSTabEntry, error) {
 		line := scanner.Text()
 		fields := strings.Fields(line)
 		if len(fields) != 6 {
-			return nil, mountsErr
+			return nil, errMounts
 		}
 		freq, err := strconv.Atoi(fields[4])
 		if err != nil {
@@ -80,7 +80,7 @@ type IOStatEntry struct {
 	WeightedIOMillis uint64
 }
 
-var diskStatsErr = errors.New("Cannot parse /proc/diskstats")
+var errDiskStats = errors.New("goproc: cannot parse /proc/diskstats")
 
 // DiskStats reports disk information from /proc/diskstats.
 func DiskStats() ([]*IOStatEntry, error) {
@@ -94,7 +94,7 @@ func DiskStats() ([]*IOStatEntry, error) {
 		line := scanner.Text()
 		fields := strings.Fields(line)
 		if len(fields) != 14 {
-			return nil, diskStatsErr
+			return nil, errDiskStats
 		}
 		major, err := strconv.Atoi(fields[0])
 		if err != nil {

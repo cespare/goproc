@@ -45,6 +45,9 @@ func Stat() (*StatInfo, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		key, values, err := parseStatLine(scanner.Text())
+		if err != nil {
+			return nil, err
+		}
 		switch key {
 		case "cpu":
 			stat.Cpu, err = makeCPUStatInfo(values)
@@ -59,16 +62,16 @@ func Stat() (*StatInfo, error) {
 		if strings.HasPrefix(key, "cpu") {
 			n, err := strconv.Atoi(strings.TrimPrefix(key, "cpu"))
 			if err != nil {
-				return nil, statErr
+				return nil, errStats
 			}
 			cpuStatInfo, err := makeCPUStatInfo(values)
 			if err != nil {
-				return nil, statErr
+				return nil, errStats
 			}
 			// Sanity check
 			// TODO(caleb): Update this when our cpus have > 1024 cores :)
 			if n > 1024 {
-				return nil, statErr
+				return nil, errStats
 			}
 			if cap(stat.Cpus) < n+1 {
 				newCpus := make([]*CPUStatInfo, n, 2*(n+1))
@@ -82,27 +85,27 @@ func Stat() (*StatInfo, error) {
 		switch key {
 		case "ctxt":
 			if len(values) != 1 {
-				return nil, statErr
+				return nil, errStats
 			}
 			stat.Ctxt = values[0]
 		case "btime":
 			if len(values) != 1 {
-				return nil, statErr
+				return nil, errStats
 			}
 			stat.Btime = time.Unix(int64(values[0]), 0)
 		case "processes":
 			if len(values) != 1 {
-				return nil, statErr
+				return nil, errStats
 			}
 			stat.Processes = values[0]
 		case "procs_running":
 			if len(values) != 1 {
-				return nil, statErr
+				return nil, errStats
 			}
 			stat.Procs_running = values[0]
 		case "procs_blocked":
 			if len(values) != 1 {
-				return nil, statErr
+				return nil, errStats
 			}
 			stat.Procs_blocked = values[0]
 		}
@@ -113,12 +116,12 @@ func Stat() (*StatInfo, error) {
 	return stat, nil
 }
 
-var statErr = errors.New("Cannot parse /proc/stats")
+var errStats = errors.New("goproc: cannot parse /proc/stats")
 
 func parseStatLine(line string) (key string, values []uint64, err error) {
 	fields := strings.Fields(line)
 	if len(fields) < 2 {
-		return "", nil, statErr
+		return "", nil, errStats
 	}
 	values = make([]uint64, len(fields)-1)
 	for i, field := range fields[1:] {
@@ -132,7 +135,7 @@ func parseStatLine(line string) (key string, values []uint64, err error) {
 
 func makeCPUStatInfo(values []uint64) (*CPUStatInfo, error) {
 	if len(values) > 10 {
-		return nil, statErr
+		return nil, errStats
 	}
 	statInfo := &CPUStatInfo{}
 	for i, v := range values {
